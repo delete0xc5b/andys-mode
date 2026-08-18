@@ -79,18 +79,29 @@ If your plugin does not need CSS, delete this file.
     z-index: 10;
 }
 
+/* Inactive state */
 .custom-moc-btn {
     padding: 2px 8px;
     font-size: 11px;
     font-weight: 500;
     cursor: pointer;
-    background: var(--interactive-normal);
-    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary) !important;
+    border: 1px solid transparent;
     border-radius: 4px;
-    color: var(--text-normal);
+    color: var(--text-muted) !important;
     box-shadow: none !important;
+    transition: all 0.15s ease;
 }
 
 .custom-moc-btn:hover {
-    background: var(--interactive-hover);
+    background: var(--interactive-normal);
+    color: var(--text-normal);
+}
+
+/* Active state (highlighted) */
+.custom-moc-btn.is-active {
+    background: var(--interactive-normal) !important;
+    color: var(--text-normal) !important;
+    border: 1px solid transparent;
+    font-weight: 600;
 }

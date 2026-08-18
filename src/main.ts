@@ -13,7 +13,7 @@ export default class CustomSlidingPanes extends Plugin {
     private originalOpenLinkText!: Function;
 
     async onload() {
-        console.log('Loading Custom Sliding Panes plugin (Shadowless MOC Bar Version)');
+        console.log('Loading Custom Sliding Panes plugin');
 
         await this.loadSettings();
         this.addSettingTab(new CustomSlidingPanesSettingTab(this.app, this));
@@ -72,6 +72,14 @@ export default class CustomSlidingPanes extends Plugin {
         this.registerEvent(
             this.app.workspace.on('layout-change', () => {
                 this.injectMocBar();
+                this.updateActiveMocState();
+            })
+        );
+
+        // Sync highlighted state whenever active pane or stack contents change
+        this.registerEvent(
+            this.app.workspace.on('active-leaf-change', () => {
+                this.updateActiveMocState();
             })
         );
     }
@@ -94,6 +102,7 @@ export default class CustomSlidingPanes extends Plugin {
             const btn = document.createElement('button');
             btn.className = 'custom-moc-btn';
             btn.textContent = moc.name;
+            btn.setAttribute('data-path', moc.path);
 
             btn.onclick = async () => {
                 await this.originalOpenLinkText(moc.path, '', false);
@@ -119,6 +128,38 @@ export default class CustomSlidingPanes extends Plugin {
         } else {
             targetContainer.prepend(mocBar);
         }
+
+        this.updateActiveMocState();
+    }
+
+    private updateActiveMocState() {
+        // Collect files across all currently open leaves in the main split
+        const openLeaves = this.app.workspace.getLeavesOfType('markdown').filter(leaf => 
+            leaf.getRoot() === this.app.workspace.rootSplit
+        );
+
+        const openFiles = openLeaves
+            .map(leaf => (leaf.view as any)?.file as TFile | null)
+            .filter((file): file is TFile => file !== null);
+
+        const buttons = document.querySelectorAll('.custom-moc-btn');
+        buttons.forEach((btn: Element) => {
+            const targetPath = btn.getAttribute('data-path');
+            if (!targetPath) return;
+
+            // Stay highlighted if the MOC exists anywhere in the stacked leaves
+            const isOpenInStack = openFiles.some(file => 
+                file.basename === targetPath || 
+                file.path === targetPath || 
+                file.path.endsWith(`/${targetPath}.md`)
+            );
+
+            if (isOpenInStack) {
+                btn.classList.add('is-active');
+            } else {
+                btn.classList.remove('is-active');
+            }
+        });
     }
 
     async loadSettings() {
@@ -134,6 +175,7 @@ export default class CustomSlidingPanes extends Plugin {
         if (this.originalOpenLinkText) {
             this.app.workspace.openLinkText = this.originalOpenLinkText as any;
         }
+        document.querySelectorAll('.custom-moc-bar').forEach(el => el.remove());
     }
 }
 
