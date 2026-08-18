@@ -25,7 +25,7 @@ If your plugin does not need CSS, delete this file.
     background-color: var(--background-primary) !important;
     border-radius: 8px 8px 0 0 !important; 
     border-left: 1px solid var(--background-modifier-border) !important;
-    border-right: none !important;
+    border-right: 1px solid var(--background-modifier-border) !important;
     border-top: 1px solid var(--background-modifier-border) !important;
 }
 
