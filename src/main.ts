@@ -20,6 +20,7 @@ export default class CustomSlidingPanes extends Plugin {
 
         this.originalOpenLinkText = this.app.workspace.openLinkText.bind(this.app.workspace);
 
+        // Keeps the clean horizontal sliding-pane trail and pruning engine
         this.app.workspace.openLinkText = async (linktext: string, sourcePath: string, newLeaf?: any, options?: any) => {
             try {
                 const activeLeaf = this.app.workspace.getMostRecentLeaf();
@@ -64,102 +65,6 @@ export default class CustomSlidingPanes extends Plugin {
                 await this.originalOpenLinkText(linktext, sourcePath, newLeaf, options);
             }
         };
-
-        this.app.workspace.onLayoutReady(() => {
-            this.injectMocBar();
-        });
-
-        this.registerEvent(
-            this.app.workspace.on('layout-change', () => {
-                this.injectMocBar();
-                this.updateActiveMocState();
-            })
-        );
-
-        // Sync highlighted state whenever active pane or stack contents change
-        this.registerEvent(
-            this.app.workspace.on('active-leaf-change', () => {
-                this.updateActiveMocState();
-            })
-        );
-    }
-
-    private injectMocBar() {
-        const targetContainer = document.querySelector('.workspace-split.mod-root .workspace-tab-header-container');
-        if (!targetContainer || targetContainer.querySelector('.custom-moc-bar')) return;
-
-        const mocBar = document.createElement('div');
-        mocBar.className = 'custom-moc-bar';
-
-        // To add your own custom index on top
-        const mocs = [
-            { name: 'MOC1', path: 'MOC1' },
-            { name: 'MOC2', path: 'MOC2' },
-            { name: 'MOC3', path: 'MOC3' },
-        ];
-
-        mocs.forEach(moc => {
-            const btn = document.createElement('button');
-            btn.className = 'custom-moc-btn';
-            btn.textContent = moc.name;
-            btn.setAttribute('data-path', moc.path);
-
-            btn.onclick = async () => {
-                await this.originalOpenLinkText(moc.path, '', false);
-
-                const activeLeaf = this.app.workspace.getMostRecentLeaf();
-                const allMainLeaves = this.app.workspace.getLeavesOfType('markdown').filter(leaf => 
-                    leaf.getRoot() === this.app.workspace.rootSplit
-                );
-
-                allMainLeaves.forEach(leaf => {
-                    if (leaf !== activeLeaf) {
-                        leaf.detach();
-                    }
-                });
-            };
-
-            mocBar.appendChild(btn);
-        });
-
-        const addButton = targetContainer.querySelector('.workspace-tab-header-add-button');
-        if (addButton) {
-            addButton.insertAdjacentElement('afterend', mocBar);
-        } else {
-            targetContainer.prepend(mocBar);
-        }
-
-        this.updateActiveMocState();
-    }
-
-    private updateActiveMocState() {
-        // Collect files across all currently open leaves in the main split
-        const openLeaves = this.app.workspace.getLeavesOfType('markdown').filter(leaf => 
-            leaf.getRoot() === this.app.workspace.rootSplit
-        );
-
-        const openFiles = openLeaves
-            .map(leaf => (leaf.view as any)?.file as TFile | null)
-            .filter((file): file is TFile => file !== null);
-
-        const buttons = document.querySelectorAll('.custom-moc-btn');
-        buttons.forEach((btn: Element) => {
-            const targetPath = btn.getAttribute('data-path');
-            if (!targetPath) return;
-
-            // Stay highlighted if the MOC exists anywhere in the stacked leaves
-            const isOpenInStack = openFiles.some(file => 
-                file.basename === targetPath || 
-                file.path === targetPath || 
-                file.path.endsWith(`/${targetPath}.md`)
-            );
-
-            if (isOpenInStack) {
-                btn.classList.add('is-active');
-            } else {
-                btn.classList.remove('is-active');
-            }
-        });
     }
 
     async loadSettings() {
@@ -167,7 +72,7 @@ export default class CustomSlidingPanes extends Plugin {
     }
 
     async saveSettings() {
-        await this.saveData(this.settings);
+        this.saveData(this.settings);
     }
 
     onunload() {
@@ -175,7 +80,6 @@ export default class CustomSlidingPanes extends Plugin {
         if (this.originalOpenLinkText) {
             this.app.workspace.openLinkText = this.originalOpenLinkText as any;
         }
-        document.querySelectorAll('.custom-moc-bar').forEach(el => el.remove());
     }
 }
 
