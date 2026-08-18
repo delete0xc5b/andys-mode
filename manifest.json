@@ -1,0 +1,9 @@
+{
+	"id": "andys-mode",
+	"name": "Andy's Mode",
+	"version": "1.0.0",
+	"minAppVersion": "1.0.0",
+	"description": "Experience inspired by https://notes.andymatuschak.org for Obsidian",
+	"author": "Sauli",
+	"isDesktopOnly": false
+}
