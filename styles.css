@@ -7,29 +7,19 @@ If your plugin does not need CSS, delete this file.
 
 */
 
-.workspace-tabs.mod-stacked .workspace-leaf {
-  width: 750px !important;
-  min-width: 750px !important;
-  max-width: 750px !important;
-  flex-basis: 750px !important;
-  flex-grow: 0 !important;
-  flex-shrink: 0 !important;
-  box-shadow: -8px 0 16px rgba(0, 0, 0, 0.15) !important;
-}
-
 /* ==========================================================
    1. THE PAPER CARDS (Layout, Width, and Shadows)
    ========================================================== */
 .workspace-tabs.mod-stacked .workspace-leaf {
-    width: 700px !important;
-    min-width: 700px !important;
-    max-width: 700px !important;
-    flex-basis: 700px !important;
+    width: 750px !important;
+    min-width: 750px !important;
+    max-width: 750px !important;
+    flex-basis: 750px !important;
     flex-grow: 0 !important;
     flex-shrink: 0 !important;
     
     /* The 3D drop shadow to separate the layers */
-    box-shadow: -12px 0 24px rgba(0, 0, 0, 0.15) !important;
+    /* box-shadow: -12px 0 24px rgba(0, 0, 0, 0.15) !important; */
     
     /* Make it look like a physical card */
     background-color: var(--background-primary) !important;
@@ -78,4 +68,29 @@ If your plugin does not need CSS, delete this file.
 .workspace-tabs.mod-stacked .workspace-leaf .markdown-source-view:hover::-webkit-scrollbar-thumb {
     background-color: var(--background-modifier-border) !important;
     border-radius: 10px;
+}
+
+.custom-moc-bar {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-left: 8px;
+    margin-right: 8px;
+    z-index: 10;
+}
+
+.custom-moc-btn {
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    background: var(--interactive-normal);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    color: var(--text-normal);
+    box-shadow: none !important;
+}
+
+.custom-moc-btn:hover {
+    background: var(--interactive-hover);
 }

@@ -13,22 +13,19 @@ export default class CustomSlidingPanes extends Plugin {
     private originalOpenLinkText!: Function;
 
     async onload() {
-        console.log('Loading Custom Sliding Panes plugin (Anti-Duplicate Version)');
+        console.log('Loading Custom Sliding Panes plugin (Shadowless MOC Bar Version)');
 
         await this.loadSettings();
         this.addSettingTab(new CustomSlidingPanesSettingTab(this.app, this));
 
-        // Store Obsidian's native link-opening function to restore it later
         this.originalOpenLinkText = this.app.workspace.openLinkText.bind(this.app.workspace);
 
-        // Override Obsidian's internal link router
         this.app.workspace.openLinkText = async (linktext: string, sourcePath: string, newLeaf?: any, options?: any) => {
             try {
                 const activeLeaf = this.app.workspace.getMostRecentLeaf();
                 let openedInExisting = false;
 
                 if (activeLeaf) {
-                    // 1. Get a perfect left-to-right array of all notes in the center workspace
                     const allMainLeaves = this.app.workspace.getLeavesOfType('markdown').filter(leaf => 
                         leaf.getRoot() === this.app.workspace.rootSplit
                     );
@@ -36,26 +33,20 @@ export default class CustomSlidingPanes extends Plugin {
                     const activeIndex = allMainLeaves.findIndex(l => l === activeLeaf);
 
                     if (activeIndex !== -1) {
-                        // 2. Figure out exactly which file the user is trying to open
                         const targetFile = this.app.metadataCache.getFirstLinkpathDest(linktext, sourcePath);
                         const targetPath = targetFile ? targetFile.path : linktext;
 
-                        // 3. DUPLICATE PREVENTION: Check the immediate next tab
                         const nextLeaf = allMainLeaves[activeIndex + 1];
                         const nextLeafFile = nextLeaf ? (nextLeaf.view as any).file : null;
 
-                        let pruneStartIndex = activeIndex + 1; // Default: close everything to the right
+                        let pruneStartIndex = activeIndex + 1; 
 
-                        // If the next tab is ALREADY the note we want, just focus it!
                         if (nextLeaf && nextLeafFile && nextLeafFile.path === targetPath) {
                             this.app.workspace.setActiveLeaf(nextLeaf, { focus: true });
                             openedInExisting = true;
-                            
-                            // Adjust pruning to spare this tab, but close anything after it
                             pruneStartIndex = activeIndex + 2; 
                         }
 
-                        // 4. THE PRUNING ENGINE: Close all irrelevant branches
                         const leavesToClose = allMainLeaves.slice(pruneStartIndex);
                         leavesToClose.forEach(leaf => {
                             leaf.detach();
@@ -63,7 +54,6 @@ export default class CustomSlidingPanes extends Plugin {
                     }
                 }
 
-                // 5. Open the link (if we didn't just focus an existing one)
                 if (!openedInExisting) {
                     const forceNew = (newLeaf === false || newLeaf === undefined) ? true : newLeaf;
                     await this.originalOpenLinkText(linktext, sourcePath, forceNew, options);
@@ -71,10 +61,64 @@ export default class CustomSlidingPanes extends Plugin {
 
             } catch (err) {
                 console.error("Pruning Engine Error:", err);
-                // Fail-safe: if our custom logic crashes, just open the link normally
                 await this.originalOpenLinkText(linktext, sourcePath, newLeaf, options);
             }
         };
+
+        this.app.workspace.onLayoutReady(() => {
+            this.injectMocBar();
+        });
+
+        this.registerEvent(
+            this.app.workspace.on('layout-change', () => {
+                this.injectMocBar();
+            })
+        );
+    }
+
+    private injectMocBar() {
+        const targetContainer = document.querySelector('.workspace-split.mod-root .workspace-tab-header-container');
+        if (!targetContainer || targetContainer.querySelector('.custom-moc-bar')) return;
+
+        const mocBar = document.createElement('div');
+        mocBar.className = 'custom-moc-bar';
+
+        // To add your own custom index on top
+        const mocs = [
+            { name: 'MOC1', path: 'MOC1' },
+            { name: 'MOC2', path: 'MOC2' },
+            { name: 'MOC3', path: 'MOC3' },
+        ];
+
+        mocs.forEach(moc => {
+            const btn = document.createElement('button');
+            btn.className = 'custom-moc-btn';
+            btn.textContent = moc.name;
+
+            btn.onclick = async () => {
+                await this.originalOpenLinkText(moc.path, '', false);
+
+                const activeLeaf = this.app.workspace.getMostRecentLeaf();
+                const allMainLeaves = this.app.workspace.getLeavesOfType('markdown').filter(leaf => 
+                    leaf.getRoot() === this.app.workspace.rootSplit
+                );
+
+                allMainLeaves.forEach(leaf => {
+                    if (leaf !== activeLeaf) {
+                        leaf.detach();
+                    }
+                });
+            };
+
+            mocBar.appendChild(btn);
+        });
+
+        const addButton = targetContainer.querySelector('.workspace-tab-header-add-button');
+        if (addButton) {
+            addButton.insertAdjacentElement('afterend', mocBar);
+        } else {
+            targetContainer.prepend(mocBar);
+        }
     }
 
     async loadSettings() {
