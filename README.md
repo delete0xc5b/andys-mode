@@ -4,15 +4,11 @@ Bring the digital gardening and stacked working notes experience of [Andy Matusc
 
 This plugin transforms your workspace layout to mimic a flowing, card-based stack of working notes, allowing you to trace thoughts across multiple open panes seamlessly.
 
----
-
 ## Features
 
 *   **Stacked Working Notes Layout:** Organizes your main markdown views into clean, card-like structural layers.
 *   **Smart Cross-Pane Link Highlighting:** Automatically detects active notes across your visible stack and highlights matching internal links regardless of their position.
 *   **Optimized Flow:** Designed to work hand-in-hand with fast previews and clean layouts for frictionless writing and reading.
-
----
 
 ## Installation
 
@@ -21,8 +17,6 @@ This plugin transforms your workspace layout to mimic a flowing, card-based stac
 2. Create a folder named `andys-mode` (or your preferred plugin ID) inside your vault's plugin directory: `YourVault/.obsidian/plugins/`.
 3. Move the downloaded files into that folder.
 4. Open Obsidian, go to **Settings > Community plugins**, and enable **Andy's Mode**.
-
----
 
 ## 🛠️ Development & Building
 
