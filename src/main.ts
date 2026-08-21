@@ -1,4 +1,4 @@
-import { Plugin, App, PluginSettingTab, Setting, WorkspaceLeaf, TFile } from 'obsidian';
+import { Plugin, App, PluginSettingTab, Setting } from 'obsidian';
 
 interface CustomSlidingPanesSettings {
     mySetting: string;
@@ -6,11 +6,12 @@ interface CustomSlidingPanesSettings {
 
 const DEFAULT_SETTINGS: CustomSlidingPanesSettings = {
     mySetting: 'default'
-}
+};
 
 export default class CustomSlidingPanes extends Plugin {
     settings!: CustomSlidingPanesSettings;
     private originalOpenLinkText!: Function;
+    private styleEl!: HTMLStyleElement;
 
     async onload() {
         console.log('Loading Custom Sliding Panes plugin');
@@ -18,9 +19,12 @@ export default class CustomSlidingPanes extends Plugin {
         await this.loadSettings();
         this.addSettingTab(new CustomSlidingPanesSettingTab(this.app, this));
 
+        // 1. Inject custom CSS for link highlighting
+        this.injectStyles();
+
+        // 2. Intercept openLinkText to handle leaf pruning and opening
         this.originalOpenLinkText = this.app.workspace.openLinkText.bind(this.app.workspace);
 
-        // Keeps the clean horizontal sliding-pane trail and pruning engine
         this.app.workspace.openLinkText = async (linktext: string, sourcePath: string, newLeaf?: any, options?: any) => {
             try {
                 const activeLeaf = this.app.workspace.getMostRecentLeaf();
@@ -63,8 +67,88 @@ export default class CustomSlidingPanes extends Plugin {
             } catch (err) {
                 console.error("Pruning Engine Error:", err);
                 await this.originalOpenLinkText(linktext, sourcePath, newLeaf, options);
+            } finally {
+                // Update link highlights after opening/pruning leaves
+                setTimeout(() => this.updateLinkHighlights(), 50);
             }
         };
+
+        // 3. Register events to update highlights dynamically as notes load or change
+        this.registerEvent(this.app.workspace.on('layout-change', () => this.updateLinkHighlights()));
+        this.registerEvent(this.app.workspace.on('active-leaf-change', () => this.updateLinkHighlights()));
+        this.registerEvent(this.app.metadataCache.on('changed', () => this.updateLinkHighlights()));
+    }
+
+    /**
+     * Scans all open stacked leaves from left to right.
+     * If leaf N+1 displays a file linked inside leaf N, highlights that link in leaf N.
+     */
+    public updateLinkHighlights() {
+    const allMainLeaves = this.app.workspace.getLeavesOfType('markdown').filter(leaf => 
+        leaf.getRoot() === this.app.workspace.rootSplit
+    );
+
+    // Clear all existing highlights across all leaves
+    allMainLeaves.forEach(leaf => {
+        const container = (leaf.view as any).containerEl as HTMLElement;
+        if (!container) return;
+        const highlighted = container.querySelectorAll('.is-stacked-parent-link');
+        highlighted.forEach(el => el.classList.remove('is-stacked-parent-link'));
+    });
+
+    // Loop through leaves and highlight links pointing to the immediate next right leaf
+    for (let i = 0; i < allMainLeaves.length - 1; i++) {
+        const currentLeaf = allMainLeaves[i];
+        const nextLeaf = allMainLeaves[i + 1];
+
+        // Fix: Explicit undefined check to satisfy TypeScript compiler
+        if (!currentLeaf || !nextLeaf) continue;
+
+        const currentView = currentLeaf.view as any;
+        const nextView = nextLeaf.view as any;
+
+        if (!currentView?.file || !nextView?.file) continue;
+
+        const targetFilePath = nextView.file.path;
+        const sourceFilePath = currentView.file.path;
+        const container = currentView.containerEl as HTMLElement;
+        if (!container) continue;
+
+        // Query all internal link DOM elements (Reading Mode & Live Preview Editor)
+        const linkElements = container.querySelectorAll<HTMLElement>(
+            'a.internal-link, .cm-hmd-internal-link, .cm-link, [data-href]'
+        );
+
+        linkElements.forEach(el => {
+            const rawLink = el.getAttribute('data-href') || el.dataset.href || el.textContent || '';
+            if (!rawLink.trim()) return;
+
+            const destFile = this.app.metadataCache.getFirstLinkpathDest(rawLink.trim(), sourceFilePath);
+
+            if (destFile && destFile.path === targetFilePath) {
+                el.classList.add('is-stacked-parent-link');
+            }
+        });
+    }
+}
+
+    /**
+     * Injects custom CSS rules into Obsidian for the active link highlight.
+     */
+    private injectStyles() {
+        this.styleEl = document.createElement('style');
+        this.styleEl.id = 'custom-sliding-panes-styles';
+        this.styleEl.textContent = `
+            /* Highlight style for links that opened the adjacent right pane */
+            .is-stacked-parent-link {
+                background-color: var(--text-selection) !important;
+                border-bottom: 2px solid var(--interactive-accent) !important;
+                border-radius: 3px;
+                padding: 0 2px;
+                transition: background-color 0.15s ease, border-color 0.15s ease;
+            }
+        `;
+        document.head.appendChild(this.styleEl);
     }
 
     async loadSettings() {
@@ -77,8 +161,15 @@ export default class CustomSlidingPanes extends Plugin {
 
     onunload() {
         console.log('Unloading Custom Sliding Panes plugin');
+        
+        // Restore original openLinkText
         if (this.originalOpenLinkText) {
             this.app.workspace.openLinkText = this.originalOpenLinkText as any;
+        }
+
+        // Remove injected styles
+        if (this.styleEl && this.styleEl.parentNode) {
+            this.styleEl.parentNode.removeChild(this.styleEl);
         }
     }
 }
