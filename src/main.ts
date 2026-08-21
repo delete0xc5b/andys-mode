@@ -23,42 +23,59 @@ export default class CustomSlidingPanes extends Plugin {
 
         this.app.workspace.openLinkText = async (linktext: string, sourcePath: string, newLeaf?: any, options?: any) => {
             try {
+                const allMainLeaves = this.app.workspace.getLeavesOfType('markdown').filter(leaf => 
+                    leaf.getRoot() === this.app.workspace.rootSplit
+                );
+
+                const targetFile = this.app.metadataCache.getFirstLinkpathDest(linktext, sourcePath);
+
+                // 1. Check if the target note is already open ANYWHERE in the stack
+                if (targetFile) {
+                    const targetPath = targetFile.path;
+                    const existingLeaf = allMainLeaves.find(leaf => {
+                        const view = leaf.view as any;
+                        return view?.file?.path === targetPath;
+                    });
+
+                    if (existingLeaf) {
+                        // The note is already open! Focus it directly.
+                        this.app.workspace.setActiveLeaf(existingLeaf, { focus: true });
+                        
+                        // Safely parse header/block references (e.g., "Note#Header")
+                        const hashIndex = linktext.indexOf('#');
+                        const subpath = hashIndex !== -1 ? linktext.substring(hashIndex) : undefined;
+                        
+                        // Merge subpath into ephemeral state so it scrolls to the header
+                        const eState = options?.eState || {};
+                        if (subpath) {
+                            eState.subpath = subpath;
+                        }
+                        
+                        // Directly instruct the existing leaf to open the file and state.
+                        // This bypasses originalOpenLinkText entirely so it CANNOT spawn a new pane!
+                        await existingLeaf.openFile(targetFile, { active: true, eState });
+                        return; // Stop here so we don't prune or spawn anything new
+                    }
+                }
+
+                // 2. If it's NOT already open, we prune the panes to the right and open a new one
                 const activeLeaf = this.app.workspace.getMostRecentLeaf();
-                let openedInExisting = false;
 
                 if (activeLeaf) {
-                    const allMainLeaves = this.app.workspace.getLeavesOfType('markdown').filter(leaf => 
-                        leaf.getRoot() === this.app.workspace.rootSplit
-                    );
-
                     const activeIndex = allMainLeaves.findIndex(l => l === activeLeaf);
 
                     if (activeIndex !== -1) {
-                        const targetFile = this.app.metadataCache.getFirstLinkpathDest(linktext, sourcePath);
-                        const targetPath = targetFile ? targetFile.path : linktext;
-
-                        const nextLeaf = allMainLeaves[activeIndex + 1];
-                        const nextLeafFile = nextLeaf ? (nextLeaf.view as any).file : null;
-
-                        let pruneStartIndex = activeIndex + 1; 
-
-                        if (nextLeaf && nextLeafFile && nextLeafFile.path === targetPath) {
-                            this.app.workspace.setActiveLeaf(nextLeaf, { focus: true });
-                            openedInExisting = true;
-                            pruneStartIndex = activeIndex + 2; 
-                        }
-
-                        const leavesToClose = allMainLeaves.slice(pruneStartIndex);
+                        // Detach all leaves to the right of the current one
+                        const leavesToClose = allMainLeaves.slice(activeIndex + 1);
                         leavesToClose.forEach(leaf => {
                             leaf.detach();
                         });
                     }
                 }
 
-                if (!openedInExisting) {
-                    const forceNew = (newLeaf === false || newLeaf === undefined) ? true : newLeaf;
-                    await this.originalOpenLinkText(linktext, sourcePath, forceNew, options);
-                }
+                // 3. Open the newly clicked link as a new leaf (pushed to the right)
+                const forceNew = (newLeaf === false || newLeaf === undefined) ? true : newLeaf;
+                await this.originalOpenLinkText(linktext, sourcePath, forceNew, options);
 
             } catch (err) {
                 console.error("Pruning Engine Error:", err);
