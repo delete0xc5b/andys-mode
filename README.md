@@ -17,7 +17,7 @@ This plugin transforms your workspace layout to mimic a flowing, card-based stac
 ## Installation
 
 ### Manual Installation
-1. Download the latest release files (`main.js`, `styles.css`, `manifest.json`) from `/src`.
+1. Download the latest release files (`main.js`, `styles.css`, `manifest.json`) from release files.
 2. Create a folder named `andys-mode` (or your preferred plugin ID) inside your vault's plugin directory: `YourVault/.obsidian/plugins/`.
 3. Move the downloaded files into that folder.
 4. Open Obsidian, go to **Settings > Community plugins**, and enable **Andy's Mode**.
