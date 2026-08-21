@@ -29,6 +29,55 @@ If your plugin does not need CSS, delete this file.
     border-top: 1px solid var(--background-modifier-border) !important;
 }
 
+/* Make Hover Editor plugin windows ignore the mouse completely */
+
+/* 1. Force the popover container width and ignore the mouse */
+.hover-popover.hover-editor {
+    pointer-events: none !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+}
+
+/* 2. Hide the title bar */
+.hover-popover.hover-editor .popover-titlebar {
+    display: none !important;
+}
+
+/* 3. Completely wipe out all scrollbars inside the hover editor */
+.hover-popover.hover-editor *,
+.hover-popover.hover-editor *::before,
+.hover-popover.hover-editor *::after {
+    scrollbar-width: none !important; /* Firefox */
+}
+
+.hover-popover.hover-editor *::-webkit-scrollbar {
+    display: none !important; /* Chrome, Edge, Safari */
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* 4. Kill the flexbox minimum-width trap for all child elements */
+.hover-popover.hover-editor *, 
+.hover-popover.hover-editor *::before, 
+.hover-popover.hover-editor *::after {
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* 5. Force aggressive text wrapping and containment */
+.hover-popover.hover-editor .popover-content,
+.hover-popover.hover-editor .markdown-rendered,
+.hover-popover.hover-editor p,
+.hover-popover.hover-editor span,
+.hover-popover.hover-editor a,
+.hover-popover.hover-editor li {
+    max-width: 100% !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+    white-space: normal !important;
+}
+
+
 /* ==========================================================
    2. ERASING THE SPINES (Hiding native tab headers)
    ========================================================== */
