@@ -69,3 +69,12 @@ If your plugin does not need CSS, delete this file.
     background-color: var(--background-modifier-border) !important;
     border-radius: 10px;
 }
+
+/* Highlight style for links that opened the adjacent right pane */
+.is-stacked-parent-link {
+    background-color: var(--text-selection) !important;
+    border-bottom: 2px solid var(--interactive-accent) !important;
+    border-radius: 3px;
+    padding: 0 2px;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
