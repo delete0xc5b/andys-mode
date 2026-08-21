@@ -80,7 +80,16 @@ export default class CustomSlidingPanes extends Plugin {
             leaf.getRoot() === this.app.workspace.rootSplit
         );
 
-        // Clear all existing highlights across all leaves
+        // 1. Gather a list (Set) of every file currently open in the stacked panes
+        const openFilePaths = new Set<string>();
+        allMainLeaves.forEach(leaf => {
+            const view = leaf.view as any;
+            if (view?.file?.path) {
+                openFilePaths.add(view.file.path);
+            }
+        });
+
+        // 2. Clear all existing highlights across all leaves first
         allMainLeaves.forEach(leaf => {
             const container = (leaf.view as any).containerEl as HTMLElement;
             if (!container) return;
@@ -88,22 +97,14 @@ export default class CustomSlidingPanes extends Plugin {
             highlighted.forEach(el => el.classList.remove('is-stacked-parent-link'));
         });
 
-        // Loop through leaves and highlight links pointing to the immediate next right leaf
-        for (let i = 0; i < allMainLeaves.length - 1; i++) {
-            const currentLeaf = allMainLeaves[i];
-            const nextLeaf = allMainLeaves[i + 1];
+        // 3. Loop through all leaves and highlight links pointing to ANY open file
+        allMainLeaves.forEach(leaf => {
+            const currentView = leaf.view as any;
+            if (!currentView?.file) return;
 
-            if (!currentLeaf || !nextLeaf) continue;
-
-            const currentView = currentLeaf.view as any;
-            const nextView = nextLeaf.view as any;
-
-            if (!currentView?.file || !nextView?.file) continue;
-
-            const targetFilePath = nextView.file.path;
             const sourceFilePath = currentView.file.path;
             const container = currentView.containerEl as HTMLElement;
-            if (!container) continue;
+            if (!container) return;
 
             const linkElements = container.querySelectorAll<HTMLElement>(
                 'a.internal-link, .cm-hmd-internal-link, .cm-link, [data-href]'
@@ -115,11 +116,12 @@ export default class CustomSlidingPanes extends Plugin {
 
                 const destFile = this.app.metadataCache.getFirstLinkpathDest(rawLink.trim(), sourceFilePath);
 
-                if (destFile && destFile.path === targetFilePath) {
+                // If the link resolves to a file that is in our 'openFilePaths' Set, highlight it
+                if (destFile && openFilePaths.has(destFile.path)) {
                     el.classList.add('is-stacked-parent-link');
                 }
             });
-        }
+        });
     }
 
     async loadSettings() {
